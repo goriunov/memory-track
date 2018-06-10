@@ -202,3 +202,15 @@
   fill: #ccc;
   /*  font-size: 28px !important;*/
 }
+
+.grid .tick {
+  stroke: lightgrey;
+  opacity: 0.7;
+}
+.grid path {
+  stroke-width: 0;
+}
+
+.c3-grid line {
+  stroke: rgba(255, 255, 255, 0.1);
+}

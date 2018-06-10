@@ -1,57 +1,18 @@
-const memoryUsage = require('./memoryUsage');
-const csvWriter = require('csv-write-stream');
-const path = require('path');
-const http = require('http');
-const PassThrough = require('readable-stream').PassThrough;
-const pump = require('pump');
-const ecstatic = require('ecstatic');
-const SSE = require('sse-stream');
-/**
- *
- * @param {*} options
- * options.freq = 5000
- * options.gc = true / false
- */
+const fs = require('fs');
 
-function chatStream(cb) {
-  const input = new PassThrough();
-  const server = http.createServer(ecstatic({ root: path.join(__dirname, 'public') }));
-  const sse = SSE('/data');
-  let header;
+function memoryTrack(opts) {
+  const execute = () => setTimeout(measure, opts.freq);
+  console.log("Dont forget to add expose flag if u use gc 'node --expose-gc filename.js'");
+  fs.writeFile(opts.file, `rss,heapTotal,heapUsed,external\n`, { flag: 'w' }, execute);
 
-  sse.install(server);
-
-  sse.on('connection', function(client) {
-    input.once('data', function(chunk) {
-      if (chunk !== header) client.write(header);
-      client.write(chunk);
-      pump(input, client);
-    });
-  });
-
-  server.listen(function() {
-    sse.interval.unref();
-    cb('http://localhost:' + server.address().port);
-  });
-
-  server.unref();
-
-  input.once('data', function(chunk) {
-    header = chunk;
-  });
-
-  return input;
+  function measure() {
+    if (opts.gc) global.gc();
+    const usage = process.memoryUsage();
+    fs.appendFile(opts.file, `${usage.rss},${usage.heapTotal},${usage.heapUsed},${usage.external}\n`, execute);
+  }
 }
 
-function memoryTrack(options) {
-  memoryUsage(options)
-    .pipe(csvWriter())
-    .pipe(chatStream((url) => console.log(`Open ${url} in your browser to see the chart`)));
-}
+// memoryTrack({ freq: 5000, gc: true, file: './memory.csv' });
 
-// memoryTrack({freq: 5000, gc: true})
-
-// setInterval(() => {
-//   console.log('I am here')
-// }, 20000)
+// setInterval(() => console.log('I am here'), 20000);
 module.exports = memoryTrack;
